@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liên Quân Counter Vote</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf8f8;
+      --bg-card: #161929;
+      --bg-modal: #1a1e30;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.18);
+      --text-primary: #f0f2ff;
+      --text-secondary: #8a90b0;
+      --text-muted: #4e5470;
+      --accent: #e8a020;
+      --accent-glow: rgba(232,160,32,0.18);
+      --blue: #3a8cff;
+      --blue-bg: rgba(58,140,255,0.12);
+      --voted: #e8a020;
+      --voted-bg: rgba(232,160,32,0.14);
+    }
+
+    body {
+      background: url('./686932896_1432498575578612_3068396618796667876_n.png');
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+    body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+    /* ── HEADER ── */
+    .site-header {
+      background: linear-gradient(180deg, #0a0c18 0%, transparent 100%);
+      padding: 2rem 1.5rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+    .site-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 320px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .logo-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 0.5px solid var(--accent);
+      border-radius: 999px;
+      padding: 3px 12px;
+      margin-bottom: 10px;
+    }
+    .site-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    .site-title span { color: var(--accent); }
+    .site-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ── CONTAINER ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; }
+
+    /* ── SEARCH ── */
+    .search-wrap { position: relative; margin-bottom: 1rem; }
+    .search-wrap input {
+      width: 100%;
+      padding: 11px 18px 11px 42px;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-wrap input::placeholder { color: var(--text-muted); }
+    .search-wrap input:focus { border-color: var(--border-hover); }
+    .search-icon {
+      position: absolute;
+      left: 14px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 17px;
+      pointer-events: none;
+    }
+
+    /* ── ROLES ── */
+    .roles {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .role-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 0.5px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .role-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .role-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .role-icon { font-size: 14px; }
+
+    /* ── GRID ── */
+    .champs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ── CHAMPION CARD ── */
+    .champ-card {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, background 0.2s;
+      text-align: center;
+    }
+    .champ-card:hover {
+      border-color: var(--accent);
+      background: rgba(232,160,32,0.04);
+      transform: translateY(-2px);
+    }
+    .champ-avatar {
+      width: 52px; height: 52px;    
+      border-radius: 50%;
+      margin: 0 auto 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      position: relative;   
+    }
+    .champ-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+    .champ-role-tag { font-size: 10px; color: var(--text-muted); margin-bottom: 9px; }
+
+    /* top 3 dots */
+    .top-counters {
+      display: flex; justify-content: center; align-items: center;
+      gap: 5px; min-height: 24px;
+    }
+    .top-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      border: 1px solid rgba(255,255,255,0.1);
+      position: relative;
+    }
+    .top-dot-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 2px;
+      line-height: 1.2;
+    }
+    .top-dot-wrap { text-align: center; }
+    .no-votes { font-size: 10px; color: var(--text-muted); }
+
+    /* ── OVERLAY ── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 200;
+      align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: flex; }
+
+    /* ── MODAL ── */
+    .modal {
+      background: var(--bg-modal);
+      border: 0.5px solid var(--border-hover);
+      border-radius: 18px;
+      width: min(500px, 100%);
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .modal-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 1.25rem;
+    }
+    .modal-avatar {
+      width: 58px; height: 58px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+    }
+    .modal-name { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+    .modal-role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .modal-close {
+      margin-left: auto;
+      background: none; border: 0.5px solid var(--border);
+      border-radius: 50%; width: 30px; height: 30px;
+      cursor: pointer; color: var(--text-secondary);
+      font-size: 14px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: border-color 0.15s, color 0.15s;
+    }
+    .modal-close:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+    .section-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px; margin-top: 1.25rem;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .counter-list { display: flex; flex-direction: column; gap: 7px; }
+    .counter-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.03);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.15s;
+    }
+    .counter-row:hover { border-color: var(--border-hover); }
+    .rank-num {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      min-width: 18px; text-align: center;
+    }
+    .rank-num.gold { color: var(--accent); }
+    .counter-dot-sm {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .counter-name { font-size: 13px; font-weight: 500; color: var(--text-primary); flex: 1; }
+    .vote-bar-track {
+      width: 60px; height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px; overflow: hidden;
+    }
+    .vote-bar-fill { height: 3px; border-radius: 999px; background: var(--accent); transition: width 0.35s; }
+    .vote-count { font-size: 12px; color: var(--text-secondary); min-width: 26px; text-align: right; }
+    .vote-btn {
+      border: 0.5px solid var(--border);
+      background: none;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 11px; font-weight: 500;
+      cursor: pointer; color: var(--text-secondary);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .vote-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .vote-btn.voted { background: var(--voted-bg); border-color: var(--voted); color: var(--voted); }
+
+    /* add section */
+    .add-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 6px;
+    }
+    .add-chip {
+      padding: 8px 4px 6px;
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      background: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 10px; text-align: center;
+      transition: all 0.15s;
+    }
+    .add-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+    .add-chip-emoji { font-size: 20px; display: block; margin-bottom: 3px; }
+
+    /* scrollbar */
+    .modal::-webkit-scrollbar { width: 4px; }
+    .modal::-webkit-scrollbar-track { background: transparent; }
+    .modal::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo-badge">Liên Quân Mobile</div>
+  <h1 class="site-title">Counter <span>Vote</span></h1>
+  <p class="site-desc">Bình chọn tướng khắc chế — cộng đồng xếp hạng</p>
+</header>
+
+<div class="container">
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="search" placeholder="Tìm tướng Liên Quân..." oninput="render()" />
+  </div>
+  <div class="roles" id="roles"></div>
+  <div class="champs-grid" id="grid"></div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+const ROLES = ['Tất cả','Fighter','Tank','Mage','Assassin','Marksman','Support'];
+const ROLE_ICON = { 'Tất cả':'★','Fighter':'⚔','Tank':'🛡','Mage':'✦','Assassin':'☽','Marksman':'◎','Support':'♥' };
+const ROLE_COLOR = {
+  'Fighter':  { bg:'#2a1a10', emoji_bg:'#3d2210', text:'#e8813a' },
+  'Tank':     { bg:'#0f1e2e', emoji_bg:'#102436', text:'#3a8cff' },
+  'Mage':     { bg:'#1a1030', emoji_bg:'#241540', text:'#a07af0' },
+  'Assassin': { bg:'#141414', emoji_bg:'#1e1e1e', text:'#aaaaaa' },
+  'Marksman': { bg:'#201a08', emoji_bg:'#2e2408', text:'#e8a020' },
+  'Support':  { bg:'#28101e', emoji_bg:'#361428', text:'#e07ab0' },
+};
+
+// Liên Quân Mobile champions
+const CHAMPS = [
+  {id:'aov_laville',  name:'Laville',    role:'Marksman', emoji:'🔫'},
+  {id:'aov_violet',   name:'Violet',     role:'Marksman', emoji:'🏹'},
+  {id:'aov_yorn',     name:'Yorn',       role:'Marksman', emoji:'⚡'},
+  {id:'aov_jinnar',   name:'Jinnar',     role:'Mage',     emoji:'🔥'},
+  {id:'aov_tulen',    name:'Tulen',      role:'Mage',     emoji:'🌪'},
+  {id:'aov_iggy',     name:'Iggy',       role:'Mage',     emoji:'🐉'},
+  {id:'aov_zata',     name:'Zata',       role:'Assassin', emoji:'⚔'},
+  {id:'aov_murad',    name:'Murad',      role:'Assassin', emoji:'🌀'},
+  {id:'aov_nakroth',  name:'Nakroth',    role:'Assassin', emoji:'☽'},
+  {id:'aov_grakk',    name:'Grakk',      role:'Tank',     emoji:'⛓'},
+  {id:'aov_baldum',   name:'Baldum',     role:'Tank',     emoji:'🛡'},
+  {id:'aov_thane',    name:'Thane',      role:'Tank',     emoji:'🏰'},
+  {id:'aov_roxie',    name:'Roxie',      role:'Fighter',  emoji:'🥊'},
+  {id:'aov_omen',     name:'Omen',       role:'Fighter',  emoji:'💀'},
+  {id:'aov_florentino',name:'Florentino',role:'Fighter',  emoji:'🌹'},
+  {id:'aov_alice',    name:'Alice',      role:'Support',  emoji:'🌸'},
+  {id:'aov_annette',  name:'Annette',    role:'Support',  emoji:'🌬'},
+  {id:'aov_zip',      name:'Zip',        role:'Support',  emoji:'🎈'},
+];
+
+const champMap = {};
+CHAMPS.forEach(c => champMap[c.id] = c);
+
+// Seed random votes
+const votes = {};
+const voted = {};
+const COUNTER_MAP = {
+  'aov_laville':   ['aov_nakroth','aov_murad','aov_zata','aov_grakk','aov_baldum'],
+  'aov_violet':    ['aov_murad','aov_zata','aov_grakk','aov_omen','aov_nakroth'],
+  'aov_yorn':      ['aov_nakroth','aov_zata','aov_baldum','aov_murad','aov_roxie'],
+  'aov_jinnar':    ['aov_zata','aov_murad','aov_nakroth','aov_florentino','aov_omen'],
+  'aov_tulen':     ['aov_nakroth','aov_murad','aov_zata','aov_grakk','aov_omen'],
+  'aov_iggy':      ['aov_zata','aov_omen','aov_murad','aov_thane','aov_nakroth'],
+  'aov_zata':      ['aov_grakk','aov_baldum','aov_thane','aov_roxie','aov_omen'],
+  'aov_murad':     ['aov_grakk','aov_thane','aov_baldum','aov_omen','aov_florentino'],
+  'aov_nakroth':   ['aov_grakk','aov_baldum','aov_thane','aov_alice','aov_zip'],
+  'aov_grakk':     ['aov_tulen','aov_jinnar','aov_violet','aov_iggy','aov_laville'],
+  'aov_baldum':    ['aov_jinnar','aov_tulen','aov_iggy','aov_yorn','aov_laville'],
+  'aov_thane':     ['aov_jinnar','aov_iggy','aov_tulen','aov_violet','aov_yorn'],
+  'aov_roxie':     ['aov_murad','aov_nakroth','aov_zata','aov_alice','aov_zip'],
+  'aov_omen':      ['aov_tulen','aov_jinnar','aov_iggy','aov_alice','aov_annette'],
+  'aov_florentino':['aov_grakk','aov_baldum','aov_thane','aov_alice','aov_zip'],
+  'aov_alice':     ['aov_zata','aov_murad','aov_nakroth','aov_omen','aov_iggy'],
+  'aov_annette':   ['aov_zata','aov_murad','aov_omen','aov_nakroth','aov_iggy'],
+  'aov_zip':       ['aov_zata','aov_murad','aov_omen','aov_nakroth','aov_jinnar'],
+};
+
+CHAMPS.forEach(c => {
+  votes[c.id] = {};
+  voted[c.id] = {};
+  (COUNTER_MAP[c.id] || []).forEach(cid => {
+    votes[c.id][cid] = Math.floor(Math.random() * 80) + 10;
+  });
+});
+
+let activeRole = 'Tất cả';
+let activeChamp = null;
+
+/* ── ROLE FILTER ── */
+function renderRoles() {
+  document.getElementById('roles').innerHTML = ROLES.map(r => `
+    <button class="role-btn ${activeRole === r ? 'active' : ''}" onclick="setRole('${r}')">
+      <span class="role-icon">${ROLE_ICON[r]}</span>${r}
+    </button>
+  `).join('');
+}
+function setRole(r) { activeRole = r; render(); }
+
+/* ── CHAMPION GRID ── */
+function filteredChamps() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  return CHAMPS.filter(c => {
+    const roleOk = activeRole === 'Tất cả' || c.role === activeRole;
+    const searchOk = !q || c.name.toLowerCase().includes(q);
+    return roleOk && searchOk;
+  });
+}
+
+function render() {
+  renderRoles();
+  const list = filteredChamps();
+  const grid = document.getElementById('grid');
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state">Không tìm thấy tướng nào</div>';
+    return;
+  }
+  grid.innerHTML = list.map(c => {
+    const rc = ROLE_COLOR[c.role] || {};
+    const top3 = Object.entries(votes[c.id])
+      .sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    const dots = top3.length
+      ? top3.map(([cid]) => {
+          const cc = champMap[cid];
+          if (!cc) return '';
+          const rc2 = ROLE_COLOR[cc.role] || {};
+          return `<div class="top-dot-wrap">
+            <div class="top-dot" style="background:${rc2.emoji_bg||'#222'};color:${rc2.text||'#aaa'}">${cc.emoji}</div>
+          </div>`;
+        }).join('')
+      : '<span class="no-votes">Chưa có</span>';
+
+    return `
+      <div class="champ-card" onclick="openModal('${c.id}')">
+        <div class="champ-avatar" style="background:${rc.emoji_bg||'#222'};color:${rc.text||'#ccc'}">${c.emoji}</div>
+        <div class="champ-name">${c.name}</div>
+        <div class="champ-role-tag">${c.role}</div>
+        <div class="top-counters">${dots}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ── MODAL ── */
+function openModal(id) {
+  activeChamp = id;
+  renderModal();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target.id === 'overlay' || e.target.classList.contains('modal-close')) {
+    document.getElementById('overlay').classList.remove('open');
+    activeChamp = null;
+  }
+}
+
+function vote(champId, counterId) {
+  if (voted[champId][counterId]) {
+    votes[champId][counterId]--;
+    delete voted[champId][counterId];
+  } else {
+    votes[champId][counterId] = (votes[champId][counterId] || 0) + 1;
+    voted[champId][counterId] = true;
+  }
+  render();
+  renderModal();
+}
+
+function addCounter(champId, counterId) {
+  if (!votes[champId][counterId]) {
+    votes[champId][counterId] = 1;
+    voted[champId][counterId] = true;
+  }
+  render();
+  renderModal();
+}
+
+function renderModal() {
+  const c = champMap[activeChamp];
+  if (!c) return;
+  const rc = ROLE_COLOR[c.role] || {};
+
+  const sorted = Object.entries(votes[c.id]).sort((a, b) => b[1] - a[1]);
+  const maxV = sorted[0]?.[1] || 1;
+
+  const rows = sorted.map(([cid, v], i) => {
+    const cc = champMap[cid];
+    if (!cc) return '';
+    const rc2 = ROLE_COLOR[cc.role] || {};
+    const pct = Math.round((v / maxV) * 100);
+    const isVoted = voted[c.id][cid];
+    const rankClass = i === 0 ? 'rank-num gold' : 'rank-num';
+    return `
+      <div class="counter-row">
+        <span class="${rankClass}">${i + 1}</span>
+        <div class="counter-dot-sm" style="background:${rc2.emoji_bg||'#222'};color:${rc2.text||'#aaa'}">${cc.emoji}</div>
+        <span class="counter-name">${cc.name}</span>
+        <div class="vote-bar-track"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
+        <span class="vote-count">${v}</span>
+        <button class="vote-btn ${isVoted ? 'voted' : ''}" onclick="vote('${c.id}','${cid}')">
+          ${isVoted ? '✓ Đã vote' : '+ Vote'}
+        </button>
+      </div>`;
+  }).join('');
+
+  const addable = CHAMPS.filter(ch => ch.id !== c.id && !votes[c.id][ch.id]);
+  const addChips = addable.map(ch => {
+    const rc2 = ROLE_COLOR[ch.role] || {};
+    return `<button class="add-chip" onclick="addCounter('${c.id}','${ch.id}')">
+      <span class="add-chip-emoji">${ch.emoji}</span>${ch.name}
+    </button>`;
+  }).join('');
+
+  document.getElementById('modal').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-avatar" style="background:${rc.emoji_bg||'#222'};color:${rc.text||'#ccc'}">${c.emoji}</div>
+      <div>
+        <div class="modal-name">${c.name}</div>
+        <div class="modal-role">${c.role}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal(event)">✕</button>
+    </div>
+    <div class="section-label">Tướng khắc chế — xếp theo lượt vote</div>
+    <div class="counter-list">
+      ${rows || '<div style="color:#4e5470;font-size:13px;padding:6px 0">Chưa có dữ liệu khắc chế</div>'}
+    </div>
+    ${addable.length ? `<div class="section-label" style="margin-top:1.25rem">Đề xuất thêm tướng khắc chế</div><div class="add-grid">${addChips}</div>` : ''}
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
